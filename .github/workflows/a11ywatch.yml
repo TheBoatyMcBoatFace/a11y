@@ -7,7 +7,7 @@ jobs:
   checks:
       runs-on: ubuntu-latest
       steps:
-        - uses: a11ywatch/github-action@v1.12.2
+        - uses: a11ywatch/github-actions@v.1.12.2
           with:
             WEBSITE_URL: ${{ secrets.WEBSITE_URL }}
             SUBDOMAINS: true
