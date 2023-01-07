@@ -1,0 +1,121 @@
+version: "3"
+services:
+ web:
+  container_name: web
+  image: a11ywatch/web
+  ports:
+  - "3000:3000"
+  networks:
+  - front-net
+  environment:
+  - PORT=3000
+  - API=${API:-http://localhost:3280/graphql}
+  - WEB_SOCKET_URL=${WEB_SOCKET_URL:-ws://localhost:3280/graphql}
+  - DOCKER_CONTAINER=${DOCKER_CONTAINER:-true}
+ api:
+  container_name: api
+  image: a11ywatch/a11ywatch-core
+  networks:
+    - back-net
+  ports:
+    - 3280:3280
+    - 50050:50050
+    - 50051
+
+  depends_on:
+    - mongodb
+  environment:
+    - APOLLO_GRAPH_VARIANT=${APOLLO_GRAPH_VARIANT:-current}
+    - APOLLO_SCHEMA_REPORTING=${APOLLO_SCHEMA_REPORTING:-false}
+    - CLIENT_URL=${CLIENT_URL:-http://localhost:3000}
+    - DB_URL=${DB_URL:-mongodb://mongodb:27017}
+    - DB_NAME=${DB_NAME:-a11ywatch}
+    - GRAPHQL_PORT=${GRAPHQL_PORT:-3280}
+    - ROOT_URL=${ROOT_URL:-http://localhost:3280}
+    - SCRIPTS_CDN_URL=${SCRIPTS_CDN_URL:-http://localhost:8090/api}
+    - REDIS_CLIENT=${REDIS_CLIENT:-redis://redis:6379}
+    - REDIS_HOST=redis
+    - SUPER_MODE=${SUPER_MODE:-true}
+    - DOCKER_CONTAINER=${DOCKER_CONTAINER:-true}
+    - SCRIPTS_ENABLED=${SCRIPTS_ENABLED}
+ pagemind:
+  container_name: pagemind
+  image: a11ywatch/pagemind
+  networks:
+    - back-net
+  ports:
+    - 50052
+  environment:
+    - SCRIPTS_CDN_URL=${SCRIPTS_CDN_URL:-http://127.0.0.1:8090/api}
+    - SCRIPTS_CDN_URL_HOST=${SCRIPTS_CDN_URL_HOST:-http://localhost:8090/cdn}
+    - PAGESPEED_API_KEY=${PAGESPEED_API_KEY}
+    - GRPC_HOST_MAV=mav:50053
+    - GRPC_HOST_CORE=api:50051
+    - GRPC_HOST_CDN=cdn-server:50054
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+
+ mav:
+  container_name: mav
+  image: a11ywatch/mav
+  networks:
+    - back-net
+  ports:
+    - 50053
+
+ cdn-server:
+  container_name: cdn-server
+  image: a11ywatch/cdn-server
+  networks:
+    - back-net
+    - front-net
+  ports:
+    - 50054
+    - 8090:8090
+
+ crawler:
+  container_name: crawler
+  image: "a11ywatch/crawler:${CRAWLER_IMAGE:-latest}"
+  networks:
+    - back-net
+  ports:
+    - 50055
+
+ mongodb:
+  container_name: mongodb
+  networks:
+    - back-net
+  image: mongo:4.2.23
+  ports:
+    - 27017:27017
+  volumes:
+    - mongodb:/data/db
+  environment:
+    - MONGO_INITDB_DATABASE=${DB_NAME:-a11ywatch}
+
+ redis:
+  container_name: redis
+  image: redis:7.0-rc2-alpine
+  environment:
+    - ALLOW_EMPTY_PASSWORD=yes
+  networks:
+    - back-net
+    - front-net
+  ports:
+    - 6379
+
+ chrome:
+  container_name: chrome
+  image: a11ywatch/chrome
+  ports:
+    - "9222:9222"
+    - "6000:6000"
+  networks:
+    - back-net
+
+networks:
+  back-net:
+  front-net:
+
+volumes:
+  mongodb:
